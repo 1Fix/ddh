@@ -1,0 +1,81 @@
+name: DDH Windows build
+
+# Builds ddh.exe and ddh-worker.exe for Windows. Run it by hand to test a build,
+# or push a tag like ddh-v0.1.0 to build and publish a release.
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - 'ddh-v*'
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: windows-latest
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+
+      - uses: dtolnay/rust-toolchain@4360b52568e2003a75bf9bc1d59f33a8e3fc893c # stable
+        with:
+          targets: x86_64-pc-windows-msvc
+
+      - name: Configure libclang
+        shell: pwsh
+        run: |
+          "LIBCLANG_PATH=C:\Program Files\LLVM\bin" | Out-File -FilePath $env:GITHUB_ENV -Append
+
+      - name: Build (rendering enabled)
+        run: cargo build --profile release-dist --target x86_64-pc-windows-msvc -p obscura-cli --bins --features render
+
+      - name: Stage
+        shell: bash
+        run: |
+          BIN_DIR=target/x86_64-pc-windows-msvc/release-dist
+          mkdir -p dist/default
+          cp "$BIN_DIR/ddh.exe" "$BIN_DIR/ddh-worker.exe" LICENSE NOTICE dist/default/
+
+      - name: Smoke test
+        shell: bash
+        run: |
+          dist/default/ddh.exe --version
+          dist/default/ddh.exe fetch "data:text/html,<title>ok</title>" --eval "1+1"
+          dist/default/ddh.exe fetch "data:text/html,<style>body{margin:0;background:%23123456}</style>" --screenshot smoke.png
+          test -s smoke.png
+
+      - name: Package and verify Windows runtime dependencies
+        shell: pwsh
+        run: |
+          ./scripts/ci/test_package_windows.ps1
+          ./scripts/ci/package_windows.ps1 dist/default ddh-x86_64-windows.zip
+
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: ddh-x86_64-windows
+          path: ddh-x86_64-windows.zip
+          if-no-files-found: error
+          retention-days: 14
+
+  publish:
+    if: startsWith(github.ref, 'refs/tags/ddh-v')
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        with:
+          name: ddh-x86_64-windows
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          gh release create "$TAG" ddh-x86_64-windows.zip \
+            --repo "$GITHUB_REPOSITORY" \
+            --title "DDH ${TAG#ddh-v}" \
+            --notes "DDH (Dodecahedron) for Windows x86_64. Unzip and keep every file in the zip together in one folder. DDH is a fork of Obscura, licensed under Apache-2.0."

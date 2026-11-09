@@ -1,0 +1,14 @@
+DDH (Dodecahedron)
+Copyright 2026 OneFix
+
+This product is a fork of Obscura (https://github.com/h4ckf0r0day/obscura),
+copyright its authors, licensed under the Apache License, Version 2.0.
+
+Changes made in this fork:
+- 2026-11-09: Renamed the project to DDH (Dodecahedron). Replaced README.md
+  with a DDH front page; the original README is kept as docs/OBSCURA-README.md.
+- 2026-11-09: Renamed the programs from obscura / obscura-worker to ddh /
+  ddh-worker (crates/obscura-cli/Cargo.toml, crates/obscura-cli/src/main.rs,
+  crates/obscura-cli/tests, scripts/ci/package_windows.ps1,
+  scripts/ci/test_package_windows.ps1). Added the DDH Windows build workflow
+  (.github/workflows/ddh-windows.yml).
