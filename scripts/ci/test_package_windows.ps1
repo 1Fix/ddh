@@ -32,13 +32,13 @@ $root = Join-Path $env:RUNNER_TEMP ([Guid]::NewGuid().ToString())
 $stage = Join-Path $root 'stage'
 $redist = Join-Path $root 'redist'
 New-Item -ItemType Directory -Path $stage, $redist | Out-Null
-foreach ($name in @('obscura.exe', 'obscura-worker.exe')) { Set-Content (Join-Path $stage $name) 'fixture' }
+foreach ($name in @('ddh.exe', 'ddh-worker.exe')) { Set-Content (Join-Path $stage $name) 'fixture' }
 foreach ($name in @('msvcp140.dll', 'vcruntime140.dll', 'vcruntime140_1.dll')) {
     Set-Content (Join-Path $redist $name) 'redistributable fixture'
 }
 $script:imports = @{
-    'obscura.exe' = @('kernel32.dll', 'msvcp140.dll')
-    'obscura-worker.exe' = @('kernel32.dll', 'vcruntime140_1.dll')
+    'ddh.exe' = @('kernel32.dll', 'msvcp140.dll')
+    'ddh-worker.exe' = @('kernel32.dll', 'vcruntime140_1.dll')
     'msvcp140.dll' = @('vcruntime140.dll', 'vcruntime140_1.dll')
     'vcruntime140.dll' = @('kernel32.dll', 'api-ms-win-crt-runtime-l1-1-0.dll')
     'vcruntime140_1.dll' = @('vcruntime140.dll')
@@ -58,6 +58,6 @@ $script:imports['vcruntime140.dll'] = @('unexpected.dll')
 Assert-Fails { Resolve-WindowsDependencies $stage 'unused' $redist } 'unexpected.dll'
 $script:imports['vcruntime140.dll'] = @('vcruntime140d.dll')
 Assert-Fails { Resolve-WindowsDependencies $stage 'unused' $redist } 'vcruntime140d.dll'
-Remove-Item (Join-Path $stage 'obscura-worker.exe')
+Remove-Item (Join-Path $stage 'ddh-worker.exe')
 Assert-Fails { Resolve-WindowsDependencies $stage 'unused' } 'Missing packaged executable'
 Write-Host 'Windows packaging helper regression checks passed'

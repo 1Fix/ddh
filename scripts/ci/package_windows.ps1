@@ -57,7 +57,7 @@ function Test-WindowsSystemDll([string]$Name) {
 }
 
 function Resolve-WindowsDependencies([string]$Directory, [string]$Dumpbin, [string]$Redist = '') {
-    foreach ($name in @('obscura.exe', 'obscura-worker.exe')) {
+    foreach ($name in @('ddh.exe', 'ddh-worker.exe')) {
         if (!(Test-Path -LiteralPath (Join-Path $Directory $name) -PathType Leaf)) {
             throw "Missing packaged executable: $name"
         }
@@ -92,7 +92,7 @@ function Resolve-WindowsDependencies([string]$Directory, [string]$Dumpbin, [stri
 
 function Test-WindowsPackageStartup([string]$Directory) {
     # These are runner smoke tests, not evidence of a clean Windows installation.
-    foreach ($name in @('obscura.exe', 'obscura-worker.exe')) {
+    foreach ($name in @('ddh.exe', 'ddh-worker.exe')) {
         $info = [Diagnostics.ProcessStartInfo]::new((Join-Path $Directory $name))
         $info.UseShellExecute = $false
         $info.RedirectStandardInput = $true
@@ -100,14 +100,14 @@ function Test-WindowsPackageStartup([string]$Directory) {
         $info.RedirectStandardError = $true
         $info.CreateNoWindow = $true
         $info.WorkingDirectory = $Directory
-        if ($name -eq 'obscura.exe') {
+        if ($name -eq 'ddh.exe') {
             foreach ($arg in @('fetch', 'data:text/html,<title>runtime</title>', '--eval', '1+1')) {
                 $info.ArgumentList.Add($arg)
             }
         }
         $process = [Diagnostics.Process]::Start($info)
         $stderr = $process.StandardError.ReadToEndAsync()
-        if ($name -eq 'obscura-worker.exe') {
+        if ($name -eq 'ddh-worker.exe') {
             $process.StandardInput.WriteLine('{"cmd":"navigate","url":"data:text/html,<title>runtime</title>"}')
             $process.StandardInput.WriteLine('{"cmd":"evaluate","expression":"1+1"}')
             $responses = @(foreach ($index in 0..1) {
@@ -138,7 +138,7 @@ function Test-WindowsPackageStartup([string]$Directory) {
         $out = $stdout.GetAwaiter().GetResult()
         $err = $stderr.GetAwaiter().GetResult()
         if ($process.ExitCode -ne 0) { throw "$name exited $($process.ExitCode): $err" }
-        if ($name -eq 'obscura-worker.exe') {
+        if ($name -eq 'ddh-worker.exe') {
             if ($responses.Count -ne 2 -or $responses[0].ok -ne $true -or
                 $responses[1].ok -ne $true -or $responses[1].result -ne 2) {
                 throw "Worker runtime smoke failed: $($responses | ConvertTo-Json -Compress) $err"
